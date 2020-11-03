@@ -2,6 +2,9 @@
 Concurrency allows the execution of multiple tasks.
 Parallelism is a subtype of concurrency that allows the execution of multiple tasks at the very same point in time.
 
+# What is fork-join parallelism?
+In fork-join parallelism, there are points where a program, for instance, starts parallel work (fork) and others where the parallelism ends and a sequential part begins (join).
+
 # Coding assignment
 ## Warm up
 To parallelize the pi program on slide 17, I used the OMP directive `reduction`.
