@@ -1,3 +1,7 @@
+# Describe how parallelism differs from concurrency.
+Concurrency allows the execution of multiple tasks.
+Parallelism is a subtype of concurrency that allows the execution of multiple tasks at the very same point in time.
+
 # Coding assignment
 ## Warm up
 To parallelize the pi program on slide 17, I used the OMP directive `reduction`.
