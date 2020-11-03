@@ -29,6 +29,52 @@ It is not necessarily true for the implementation phase, as parallilization macr
 As can be seen below in the practical programming section, adding a single `#pragma omp parallel for` can dramatically increase the performance of the application.
 Of course that's not completely free, but quite a cheap lunch.
 
+# Discuss one thing you find particularly interesting in *Computer System: A programmer's perspective*
+The one thing I find most interesting is avoiding security holes, mentioned on page 5.
+Here I want to focus on buffer overflows.
+Consider the following function
+```C
+void chk_password() {
+    char read_buf[0xff];
+
+    printf("Enter your password: ");
+    gets(read_buf);
+    if(strcmp(read_buf, "sUp3r$ecrETp4zzw0rd") == 0) {
+        printf("Correct; go on\n");
+    } else {
+        printf("Wrong password!\n");
+        _exit(0);
+    }
+}
+```
+This function allocates 255 bytes of memory on the stack, reads the user input into it and checks whether the user input is correct (of course, in a real application the input would be hashed and compared to a stored hashed value, but let's keep it simple).
+As the man page of `gets` says, it reads characters from `stdin` into the passed buffer until a newline character appears, "No check for buffer overrun is performed".
+This means that any input longer than 255 bytes will overwrite data behind the buffer, especially the return address is vulnerable.
+If an attacker can write arbitrary values to the return address, he can control the program's execution flow, calling dangerous functions as `system`.
+
+The first (apparent) line of defense in this special case is the password check.
+It might appear as if someone passes a superlong string, the `strcmp` fails and the program exits.
+However, in C, strings are terminated by a zero byte, so `strcmp` only checks the first bytes up to the point where it encounters a zero byte.
+An attacker can now pass in the string `sUp3r$ecrETp4zzw0rd\x00` followed by some more data that overflows the buffer and overwrites the return address as desired and it will work.
+
+An effective second line of defense that is enabled by default nowadays is called stack canary.
+The idea is to place some random data on the stack in front of the return address.
+This value, the canary, is then checked for modification before the function performs a return.
+It can be spotted in the assembly with the following instructions:
+```assembly
+<+11>:    mov    rax,QWORD PTR fs:0x28    ; load canary value
+<+20>:    mov    QWORD PTR [rbp-0x8],rax  ; store it on the stack
+; do the main functionality
+<+96>:    mov    rax,QWORD PTR [rbp-0x8]  ; load the canary from stack
+<+100>:   sub    rax,QWORD PTR fs:0x28    ; compare it with the value it had before
+<+109>:   je     0x401200 <chk_password+138> ; continue to return point if canary was okay
+<+111>:   call   0x401050 <__stack_chk_fail@plt> ; issue a warning in case the canary was hurt
+```
+Since the canary value is random, an attacker can not guess it.
+He can crash it and hence threaten the availability, but he cannot exploit the program.
+Often, the canary is global for the program.
+Through other vulnerabilities as format strings, an attacker could leak the canary value and use it in his exploit string.
+
 # Coding assignment
 ## Warm up
 To parallelize the pi program on slide 17, I used the OMP directive `reduction`.
