@@ -9,3 +9,7 @@ all: $(ALL)
 
 %_opt: %.cpp
 	$(CC) $(FLAGS) -Ofast $< -o $@
+
+.PHONY: clean
+clean:
+	rm -rf $(ALL)
