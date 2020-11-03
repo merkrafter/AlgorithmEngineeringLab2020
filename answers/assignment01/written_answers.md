@@ -5,6 +5,30 @@ Parallelism is a subtype of concurrency that allows the execution of multiple ta
 # What is fork-join parallelism?
 In fork-join parallelism, there are points where a program, for instance, starts parallel work (fork) and others where the parallelism ends and a sequential part begins (join).
 
+# Herb Sutter's article *The free lunch is over*
+## What new CPU technologies does Sutter report?
+"Processor manufacturers [...] are [...] turning [...] to hyperthreading and multicore architectures"
+## Can we have a free lunch again if we exploit them in our applications?
+In my opinion, a general free lunch is not possible anymore.
+I do think, however, that we can have a pretty cheap lunch.
+One reason for this is the growth of caches.
+Here, programs that needed more memory than would fit in the cache in the past, can take advantage of the drastically lower access times that caches offer compared to RAM.
+Multiprocessor architectures and hyperthreading can speed up applications that are parallel(izable).
+Unfortunately, this is not given for every application, as the typical read-execute-write system is sequential (especially if the "execute" is some sort of aggregation operation).
+On the other hand, I claim most applications can use some kind of parallelism to their advantage in a similar way applications took advantage of rising clock cycles, that is applications written and compiled today get better with the hardware of tomorrow.
+Let's consider a HTTP webserver that processes client requests (it could read some data from a data base) and sends back an answer.
+Surely parallelism does not help in processing that one request in the free lunch context.
+Maybe there are 2 or 3 things that can be done in parallel, but that does not scale infinitely.
+What *does* scale perfectly, however, is the number of requests the server can handle in parallel.
+For a well-written server application, buying better hardware can definitely pay off.
+
+One argument against the *free* lunch is that unleashing the power of parallelism requires extra effort during the design and implementation phase of applications.
+Obviously that is true during the design phase.
+No computer can auto-parallelize your program without understanding the semantics of the underlying problem.
+It is not necessarily true for the implementation phase, as parallilization macros/annotations and libraries are getting more and more powerful.
+As can be seen below in the practical programming section, adding a single `#pragma omp parallel for` can dramatically increase the performance of the application.
+Of course that's not completely free, but quite a cheap lunch.
+
 # Coding assignment
 ## Warm up
 To parallelize the pi program on slide 17, I used the OMP directive `reduction`.
