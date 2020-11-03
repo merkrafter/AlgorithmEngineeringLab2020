@@ -28,3 +28,32 @@ pi with 100000000 steps is 3.1415926535900236 in 0.384309 seconds
 $> OMP_NUM_THREADS=2 ./pirallel_opt # again, ~ 0.5 of the single-threaded time
 pi with 100000000 steps is 3.1415926535898353 in 0.196232 seconds
 ```
+
+# Parallel Pi estimation through Monte Carlo simulation
+Here, the parallelization was introduced in commit `ccac30834f19ce`.
+The diff is cluttered due to the formatter, but there are 2 essential parts:
+1. Start a parallel region including the random generator creation. This prevents every thread from using the same seed.
+The `counter` is, again, reduced by summation over the whole region.
+2. As before, the `for` loop is parallelized.
+Using these changes, the below results could be achieved:
+```bash
+make pirallel_mc
+$> OMP_NUM_THREADS=1 ./pirallel_mc
+pi: 3.14162
+run_time: 17.157 s
+n: 100000000
+$> OMP_NUM_THREADS=2 ./pirallel_mc
+pi: 3.14167
+run_time: 9.04005 s
+n: 100000000
+```
+This time, the multi-threaded version is not exactly twice as fast as the single threaded one.
+A possible cause for this is that there is more to do than the parallelizable loop.
+```bash
+$> make pirallel_mc_opt
+$> OMP_NUM_THREADS=2 ./pirallel_mc_opt
+pi: 3.1415
+run_time: 1.70091 s
+n: 100000000
+```
+This time, the optimized version is about 5 times as fast as without `-Ofast`.
