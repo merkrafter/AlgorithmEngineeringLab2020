@@ -20,3 +20,11 @@ pi with 100000000 steps is 3.1415926535899099 in 0.382338 seconds
 $> OMP_NUM_THREADS=4 ./pirallel  # does not give any advantage on my machine
 pi with 100000000 steps is 3.1415926535896825 in 0.383342 seconds
 ```
+
+```bash
+$> make pirallel_opt
+$> OMP_NUM_THREADS=1 ./pirallel_opt # it's as fast as the dual-thread version above
+pi with 100000000 steps is 3.1415926535900236 in 0.384309 seconds
+$> OMP_NUM_THREADS=2 ./pirallel_opt # again, ~ 0.5 of the single-threaded time
+pi with 100000000 steps is 3.1415926535898353 in 0.196232 seconds
+```
