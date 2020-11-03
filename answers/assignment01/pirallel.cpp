@@ -10,6 +10,7 @@ int main() {
   double sum = 0.0; // for summing up all heights of rectangles
 
   double start_time = omp_get_wtime(); // wall clock time in seconds
+#pragma omp parallel for reduction(+ : sum)
   for (int i = 0; i < num_steps; i++) {
     double x = (i + 0.5) * width;      // midpoint
     sum = sum + (1.0 / (1.0 + x * x)); // add new height of a rectangle
