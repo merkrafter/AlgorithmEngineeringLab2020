@@ -20,7 +20,7 @@ int main() {
   double start = omp_get_wtime();
   
   // #pragma omp parallel for is an "OpenMP shortcut"
-#pragma omp parallel for num_threads(4) // denoise a bunch of images
+#pragma omp parallel for num_threads(4) schedule(dynamic)// denoise a bunch of images
   for (int i = amount_images - 1; i > -1; --i) {
     denoised_images[i] = denoise_image(images[i], i * i);
   }
