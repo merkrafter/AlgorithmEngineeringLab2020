@@ -1,5 +1,6 @@
 #include <iomanip>
 #include <iostream>
+#include <mutex>
 #include <omp.h>
 
 using namespace std;
@@ -9,6 +10,7 @@ int main() {
   double width = 1.0 / double(num_steps); // width of a rectangle
   double start_time = omp_get_wtime(); // wall clock time in seconds
   double pi = 0.0;
+  std::mutex pi_mutex;
 #pragma omp parallel num_threads(4)
   {
     int num_threads = omp_get_num_threads();
@@ -18,6 +20,7 @@ int main() {
       double x = (i + 0.5) * width; // midpoint
       sum_local = sum_local + (1.0 / (1.0 + x * x)); // add new height
     }
+    std::lock_guard<std::mutex> guard(pi_mutex);
     pi += sum_local * 4 * width;
   }
   double run_time = omp_get_wtime() - start_time;
