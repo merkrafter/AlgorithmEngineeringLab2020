@@ -10,7 +10,7 @@ int main() {
     // each thread has its own stringstream instance
     stringstream thread_iterations;
     // task for you: experiment with different schedules
-#pragma omp for schedule(static, 8)
+#pragma omp for schedule(static, 22)
     for (int i = 0; i < 32; ++i) {
       // write the iterations of a thread to the stream
       thread_iterations << i << " ";

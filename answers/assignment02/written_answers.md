@@ -47,3 +47,14 @@ With that technique, the by far best time can be achieved:
 ```
 static reordered: 0.656589 seconds
 ```
+
+## What schedule on page 18 does produce the following result?
+```
+thread 3 computed the iterations:
+thread 0 computed the iterations: 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21
+thread 1 computed the iterations: 22 23 24 25 26 27 28 29 30 31
+thread 2 computed the iterations:
+```
+One can see that 2 of 4 thread did not get any workload, hence there is probably static scheduling involved.
+As the first thread (number 0) gets 22 items while the second only gets 10, and the later get nothing, this is no automatic static scheduling, but user specified.
+In the end, this result can be "achieved" by specifying `schedule(static, 22)`.
