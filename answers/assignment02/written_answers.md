@@ -11,6 +11,32 @@ In practice, false sharing should be considered, but is often not a problem as m
 However, it can become a major performance bottleneck, if a program frequently writes data to a shared cache line.
 Note that this can happen quickly if some status variables are defined one after another in the program which makes it likely for them to be stored on the same cache line.
 
+# How do mutual exclusion constructs prevent race conditons?
+Race conditions are concurrent parts of the program whose result depends on the execution order.
+A popular example is the following:
+```cpp
+int count = 0;
+#pragma omp parallel for
+for (int i = 0; i < SOME_NUMBER; i++) {
+  count++;
+}
+```
+The `count++` might look like an atomic operation to an untrained eye, but in reality its 3 instructions:
+```asm
+<+4>:     mov    eax,DWORD PTR [rip+0x2ee8] # count
+<+10>:    add    eax,0x1
+<+13>:    mov    DWORD PTR [rip+0x2edf],eax # also count
+```
+Now both threads could read `count` at roughly the same time, say both read the value 0.
+They both add 1 to their `eax` register (which result in 1) that both threads write back to the address of `count`.
+In the end, two additions were made but `count` is only 1.
+
+Formally, a race condition occurs when two or more threads access a single resource (variable `count` in the example above) at the same time, if at least one thread writes to that resource.
+If used correctly, mutual exclusion constructs can be used by a thread to get exclusive access to a resource.
+A thread can lock a critical section, that is no other thread can execute code in that section simultaneouly, do some work and in the end unlock so that other threads can enter the critical section.
+Therefore any race conditions are eliminated.
+Of course it does not mitigate the problem if, say, multiple threads can read a value at the same time and only the write-back is protected.
+
 # Coding assignment
 ## Fix race condition bug on page 13 with a `std::mutex`.
 My implementation uses the `std::mutex` together with a `std::lock_guard`.
