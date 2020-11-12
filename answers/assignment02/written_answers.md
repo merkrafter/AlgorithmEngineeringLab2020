@@ -58,3 +58,27 @@ thread 2 computed the iterations:
 One can see that 2 of 4 thread did not get any workload, hence there is probably static scheduling involved.
 As the first thread (number 0) gets 22 items while the second only gets 10, and the later get nothing, this is no automatic static scheduling, but user specified.
 In the end, this result can be "achieved" by specifying `schedule(static, 22)`.
+
+## Modify the program on page 21 so that it always finds the smallest possible solution. How does `std::atomic::compare_exchange_weak` work?
+A trivial approach to this problem would be to remove the `solution_found` flag and the `continue` altogether and update `final_solution` with smaller values in a critical section.
+This, however, would not exploit our knowledge of the problem.
+First, as the objective value is `i` itself (instead of a complicated function of `i`) we can `continue` each iteration with an `i` value larger than `final_solution` and thus skipping most of the iterations.
+The tricky part left is the update of `final_solution`, where `std::atomic::compare_exchange_weak` comes into play.
+[Its documentation](https://en.cppreference.com/w/cpp/atomic/atomic/compare_exchange) states that it gets two arguments, a reference `expected` and a value `desired`.
+It then compares `expected` with the internal value of the atomic and if they're equal, the internal value is replaced with `desired`.
+If they are different, `expected` is replaced with the internal value so that the caller knows the internal value and does not have to read it by itself a second time.
+The return value of this method is `true` if the internal value changed.
+As the "weak" in this method's name indicates, it does not always work properly.
+Instead, it is allowed to leave the internal value untouched and update `expected` even if `expected` is equal to the internal value.
+Thus, the call should be wrapped with a while loop.
+In our example code we can use the method to update the atomic variable with smaller `i` values.
+```cpp
+while(previous > i && !final_solution.compare_exchange_weak(previous,i)) {}
+```
+translates logically to
+```cpp
+if(final_solution > i) {
+  final_solution = i;
+}
+```
+but in a thread-safe, atomic, and lock-free way.
