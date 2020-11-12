@@ -37,6 +37,51 @@ A thread can lock a critical section, that is no other thread can execute code i
 Therefore any race conditions are eliminated.
 Of course it does not mitigate the problem if, say, multiple threads can read a value at the same time and only the write-back is protected.
 
+# Explain the differences between static and dynamic schedules in OpenMP.
+## Static scheduling
+*Static* scheduling deals an approximately equal, predetermined number of iterations to each thread.
+This may result in a sub-optimal distribution of workload if the iterations are unbalanced (see exercise below), but has little to none overhead at runtime.
+By default, the compiler determines the amount of overall iterations (there are strict limitations on the types of loops that can be auto-parallelized that make it simple to calculate this number), divides it by the number of threads and assignes loops accordingly.
+The simplicity of this approach can be seen with the following setup:
+```cpp
+#pragma omp parallel
+{
+  const int thread_id = omp_get_thread_num();
+  const int num_threads = omp_get_num_threads();
+// WARNING: faulty distribution of work
+#pragma omp for schedule(static)
+  for(int i = thread_id; i < 1000; i+= number_threads) {
+    if(thread_id==2) {
+      std::cout << i << std::endl;
+    }
+  }
+}
+```
+It prints the numbers 506, 510, 514, ..., 750.
+Here, one must be really careful, because the code is correct for a single-threaded execution, but can skip an arbitrary number of iterations for multiple threads.
+
+Static scheduling can take an argument, n, that defines the size of the chunks of iterations that each thread gets assigned.
+If there are more iterations than `n*num_threads`, the allocation starts over.
+For 3 threads, 12 (`0-0xb`) iterations and `n=1`, the following assignment will be created:
+thread 0: 0 3 6 9
+thread 1: 1 4 7 a
+thread 2: 2 5 8 b
+
+Static scheduling works best if all iterations have an approximately equal workload.
+It can even be used when the programmer knows the distribution of workload, e.g. whether it increases monotonically with increasing loop counter.
+Then `schedule(static,1)` implements a somewhat equal share of work for each thread.
+
+## Dynamic scheduling
+*Dynamic* scheduling also divides the iterations into chunks, but assignes them at runtime to the threads.
+That is, if a thread becomes free, it requests the next chunk of iterations from the OpenMP runtime.
+This model come with some management overhead, but is better suited than static scheduling for loops with unbalanced workload in each iteration, espcially if nothing is known about the distribution of workload across the iterations.
+
+## More scheduling
+Apart from static and dynamic, OpenMP allows the following schedule modes:
+- *guided*: similar to dynamic, but chunk sizes are determined dynamically at runtime
+- *auto*: compiler or OpenMP runtime choose scheduling algorithm
+- *runtime*: OpenMP runtime chooses scheduling algorithm; e.g. through environment variables
+
 # Coding assignment
 ## Fix race condition bug on page 13 with a `std::mutex`.
 My implementation uses the `std::mutex` together with a `std::lock_guard`.
@@ -44,14 +89,6 @@ The latter takes ownership of the mutex and locks it if possible (else it blocks
 This approach has the advantage that the mutex is unlocked and released automatically as the `lock_guard` goes out of scope after the pi summation statement.
 
 ## Reduce runtime on page 16 by choosing an appropriate schedule.
-Possible schedules for OpenMP are:
-- *static*: approx. equal, predetermined number of iterations for each thread
-- *dynamic*: divide iterations in predetermined (many, small) chunks;
-  a thread requests a new chunk when it's done with the current one
-- *guided*: similar to dynamic, but chunk sizes are determined dynamically at runtime
-- *auto*: compiler or OpenMP runtime choose scheduling algorithm
-- *runtime*: OpenMP runtime chooses scheduling algorithm; e.g. through environment variables
-
 As the file name indicates, the workload is unbalanced.
 Therefore, the static schedule is not the best option here as the iterations on one end of the for loop are much more computationally intense than on the other end.
 This means that the first thread will be done quickly while all threads will have to wait for the last one in the end.
