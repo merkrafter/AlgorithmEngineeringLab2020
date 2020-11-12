@@ -1,3 +1,16 @@
+# What causes false sharing?
+The concept of false sharing is tightly coupled with cache lines.
+A cache line is the smallest amount of memory that can travel through the system, commonly 64 byte, but probably 128 byte soon.
+In particular, this means that processors can not just access that single variable they need, but have to request a whole cache line to work with.
+
+False sharing is caused by two or more processors that need to *update* variables (not necessarily the same) that are stored on the same cache line.
+The cache coherency mechanisms must then invalidate the cache line and synchronize it between the processors, resolving any possible conflicts, which is time-costly.
+It is called "false" sharing because it creates management overhead for contentwise independent variables, just because the memory is laid out poorly.
+
+In practice, false sharing should be considered, but is often not a problem as most of the time is used for computation.
+However, it can become a major performance bottleneck, if a program frequently writes data to a shared cache line.
+Note that this can happen quickly if some status variables are defined one after another in the program which makes it likely for them to be stored on the same cache line.
+
 # Coding assignment
 ## Fix race condition bug on page 13 with a `std::mutex`.
 My implementation uses the `std::mutex` together with a `std::lock_guard`.
