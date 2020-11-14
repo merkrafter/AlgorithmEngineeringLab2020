@@ -59,8 +59,32 @@ The simplicity of this approach can be seen with the following setup:
 ```
 It prints the numbers 506, 510, 514, ..., 750.
 Here, one must be really careful, because the code is correct for a single-threaded execution, but can skip an arbitrary number of iterations for multiple threads.
+Takeaway: do not try to schedule code yourself when also using the automatic scheduling the the `for` clause.
 
 Static scheduling can take an argument, n, that defines the size of the chunks of iterations that each thread gets assigned.
+It can be seen here:
+```cpp
+#pragma omp parallel for schedule(static,1)
+for(int i = 0; i < 1000; i++) {...}
+```
+which gcc 10.2.1 compiles down to
+```asm
+<+17>:    call   <omp_get_num_threads@plt>
+<+22>:    mov    r12d,eax                   # e.g. 4
+<+25>:    call   <omp_get_thread_num@plt>
+<+30>:    mov    r13d,eax                   # e.g. 2
+<+33>:    mov    ebx,0x0                    # loop iteration count
+<+38>:    mov    eax,ebx                    # i = ebx (0 initially)
+<+40>:    imul   eax,r12d                   # i *= num_threads
+<+44>:    add    eax,r13d                   # i += thread_id
+...
+<+105>:   add    ebx,0x1
+<+108>:   jmp    <+38>
+```
+This lets the loop start at `0*num_threads + thread_id`, continue with `1*num_threads + thread_id` etc.
+Notice that two registers are involved in controlling `i`'s value: `eax`, but also, and more importantly, `ebx`.
+The implications of this approach of updating `i` will be in focus later on again.
+
 If there are more iterations than `n*num_threads`, the allocation starts over.
 For 3 threads, 12 (`0-0xb`) iterations and `n=1`, the following assignment will be created:
 thread 0: 0 3 6 9
