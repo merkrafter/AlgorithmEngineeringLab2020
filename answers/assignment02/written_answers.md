@@ -106,6 +106,46 @@ Apart from static and dynamic, OpenMP allows the following schedule modes:
 - *auto*: compiler or OpenMP runtime choose scheduling algorithm
 - *runtime*: OpenMP runtime chooses scheduling algorithm; e.g. through environment variables
 
+# What can we do if we've found a solution while running a parallel loop in OpenMP, but still have many iterations left?
+The goal here is to stop the loop after a solution has been found to avoid running all the next loop iterations and wasting time.
+
+1. The first approach is using a shared flag that threads can query and overwrite with `true` when a solution is found.
+In theory, the flag could be defined as `bool is_done(false);` since it can only ever be turned on.
+If two threads attempt to write `true` to it at the very same time, it does not make a difference: the flag is on afterwards anyway.
+If a thread reads the flag as `false` while another thread is in the process of writing `true` to it, it does not hurt much either as the first thread will only do another loop iteration.
+However, then the compiler comes into play.
+If the flag is defined as a simple `bool`, the compiler is not aware the variable is shared and might optimize it away completely (this is unlikely, though, as it is modified conditionally).
+Fortunately, there is a "zero cost" solution for this special case: `std::atomic<bool>`.
+As [Leis](https://databasearchitects.blogspot.com/2020/10/c-concurrency-model-on-x86-for-dummies.html) points out, atomic reads are as fast as normal ones.
+The same is actually almost true for writes since the memory order can be relaxed.
+Setting the flag to `true` directly invokes the method `atomic::store` with the expensive argument `std::memory_order_seq_cst` which flushes the change into the caches shared by all CPUs to propagate it directly.
+A far better result can be achieved when calling `store` and passing `std::memory_order_release`.
+This allows to defer the propagation of the change, which is totally acceptable for this flag.
+It does not matter if user threads do two or three more iterations if the whole construct can save them thousands or even millions.
+In the end, there is only a single write anyway, so false sharing is not a big deal here as well.
+What remains is the question what should be done if the flag is true as `break` is not allowed here.
+The first thing that could come to ones mind is the following line of thoughts.
+A `for` loop stops, when its end condition is met.
+OpenMP only allows loops whose condition is of the form `iteration_variable < constant_upper_value` (or lower) so inserting the flag itself is prohibited.
+This would not be a problem as the condition can be fulfilled anyway: just check the flag in the loop and if its `true`, set the iteration variable (let's name it `i`) to the upper value.
+At the end of the current iteration, the loop checks its condition, which is `false`, and stops. Right?
+Actually, no.
+Remember the section about OpenMP schedules where it could be seen how exactly the iteration variable is updated.
+The code counts the loop iteration number and calculates `i` from that instead of maintaining `i` directly.
+This means that however `i` is modified during the loop, the change is discarded at the end of the loop.
+
+The probably second-best solution here is to check the flag at the beginning of the loop and `continue` if it's set.
+This effectively fast-forwards the loop in a branch prediction-friendly way and hence is quite efficient.
+
+2. To mitigate the missing `break`, OpenMP introduced the concept of cancellation points.
+It pretty much automates the creation of the above-mentioned flag.
+To use this mechanism, the programmer can insert a `#pragma omp cancel for` in place of the `break` to set the internal flag.
+Whenever a thread reaches an OpenMP barrier, it checks the flag and stops the loop if appropriate.
+Additionally, the programmer can specify `#pragma omp cancellation point for`s that force a check of the flag.
+OpenMP's cancellation feature is somewhat expensive, hence it is disabled by default.
+To activate is, the environment variable `OMP_CANCELLATION` must be set to `true`.
+More info at: http://jakascorner.com/blog/2016/08/omp-cancel.html
+
 # Coding assignment
 ## Fix race condition bug on page 13 with a `std::mutex`.
 My implementation uses the `std::mutex` together with a `std::lock_guard`.
