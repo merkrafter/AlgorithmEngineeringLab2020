@@ -10,7 +10,7 @@ int main() {
   auto start_time =
       omp_get_wtime(); // omp_get_wtime() is an OpenMP library routine
 
-#pragma omp parallel reduction(+ : counter)
+#pragma omp parallel default(none) shared(n) reduction(+ : counter)
   {
     random_device rd;
     unsigned int seed = rd();
