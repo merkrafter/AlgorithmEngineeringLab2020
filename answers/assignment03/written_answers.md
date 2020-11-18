@@ -39,6 +39,13 @@ It always outputs 1 as the reduction variable `sum` is initialized to the + oper
 
 Further reading: [utexas.edu](https://pages.tacc.utexas.edu/~eijkhout/pcse/html/omp-reduction.html)
 
+# What is the purpose of a barrier in parallel computing?
+The concept of barriers is a synchronization mechanism.
+Whenever a thread reaches any barrier (there are explicit and implicit barriers), it waits until every single other thread reaches that barrier as well, before it continues.
+Explicit barriers can be placed in the code via `pragma omp barrier` while implicit barriers are created by the compiler at the end of `for`, `sections`, and `single` clauses, unless the programmer also specifies `nowait`.
+Implicit barriers are always created at the end of `parallel` clauses.
+Hence, no thread can "escape" a parallel region; all threads are joined at the end of it.
+
 # Clarify how the storage attributes `private` and `firstprivate` differ from each other.
 The main difference is how the values specified are initialized.
 `private` variables are uninitialized, local versions of the declared variables.
