@@ -25,26 +25,30 @@ int main() {
   constexpr int NUM_THREADS = 2;
   // An array instead of a synchronized queue is sufficient if there will not be
   // many threads as it is the case here
-  std::array<std::thread, NUM_THREADS> threads;
-  std::array<double, NUM_THREADS> partial_sums;
+  // -1 since the main thread will calculate a piece as well
+  std::array<std::thread, NUM_THREADS - 1> threads;
+  std::array<double, NUM_THREADS - 1> partial_sums;
 
   int num_steps = 100000000;              // amount of rectangles
   double width = 1.0 / double(num_steps); // width of a rectangle
   double start_time = omp_get_wtime();    // wall clock time in seconds
 
-  for (int i = 0; i < NUM_THREADS; i++) {
+  for (int i = 0; i < threads.size(); i++) {
     const int start = i * num_steps / NUM_THREADS;
-    const int end_ = (i + 1) * num_steps / NUM_THREADS;
-    // last thread mitigates rounding issues
-    const int end = i == NUM_THREADS - 1 ? num_steps : end_;
+    const int end = (i + 1) * num_steps / NUM_THREADS;
     threads[i] =
         std::thread(integrate, start, end, width, std::ref(partial_sums[i]));
   }
-  for (int i = 0; i < NUM_THREADS; i++) {
+  // main threads computes the last chunk to avoid rounding errors
+  const int start = (NUM_THREADS - 1) * num_steps / NUM_THREADS;
+  const int end = num_steps;
+  double sum;
+  integrate(start, end, width, sum);
+
+  for (int i = 0; i < threads.size(); i++) {
     threads[i].join();
   }
 
-  double sum = 0.0;
   for (int i = 0; i < partial_sums.size(); i++) {
     sum += partial_sums[i];
   }
