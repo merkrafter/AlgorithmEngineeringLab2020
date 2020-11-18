@@ -1,4 +1,12 @@
+# What is the collapse clause in OpenMP good for?
+For loop parallelization with `pragma omp parallel for` by default only affects one loop in a nested loop scenario (the one that directly follows the clause).
+If it has only a few number of iterations, the performance gain can be low.
+Also, this behavior reduces the power of the `schedule(dynamic)` clause as the workload for each thread is much higher if it has to compute whole inner loops.
+Therefore, one can linearize the nested loop with the `collapse` clause which mitigates these problems.
+
 # Coding assignment
+## Parallelize the serial pi program from the first lecture by adding only a single line.
+Already done in week 1.
 ## Write a parallel program for computing pi using only standard C++.
 This was the initial runtime of the program:
 ```bash
