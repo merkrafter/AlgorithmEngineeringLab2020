@@ -4,6 +4,34 @@ If it has only a few number of iterations, the performance gain can be low.
 Also, this behavior reduces the power of the `schedule(dynamic)` clause as the workload for each thread is much higher if it has to compute whole inner loops.
 Therefore, one can linearize the nested loop with the `collapse` clause which mitigates these problems.
 
+# Explain how reductions work internally in OpenMP.
+The syntax of a reduction is `reduction(op:list)` where `op` is one of `+, -, *, min, max, &, |, ^, &&`, and `||`, that is commutative, associative operators (`-` computes `-x-y` for two values `x` and `y`).
+List may contain any number of variable names that should be reduced in the parallel loop.
+OpenMP then keeps a local copy of the variables in the reduction list to avoid synchronization overhead and applies the reduction operation in the end, updating the global variable.
+The listed local variables are initialized to an operator-specific neutral value (as 0 for +, 1 for * etc.).
+
+If necessary, one can create an own reduction operator using this syntax:
+```C
+#pragma omp declare reduction
+    ( identifier : typelist : combiner )
+    [initializer(initializer-expression)]
+```
+
+Note: It is not recommended to use different operations in the loop body and the `reduction` clause as the effects are hard to reason about.
+For instance, see the following program:
+```cpp
+std::vector<int> numbers{...};
+int sum = 1;
+#pragma omp parallel for reduction(+:sum)
+for(int i = 0; i < num_numbers; i++) {
+  sum *= numbers[i];
+}
+std::cout << sum << std::endl;
+```
+It always outputs 1 as the reduction variable `sum` is initialized to the + operator's initializer value 0 (rather than the specified value 1), eliminating all products in the loop, and in the end summing all 0s with the global value 1.
+
+Further reading: [utexas.edu](https://pages.tacc.utexas.edu/~eijkhout/pcse/html/omp-reduction.html)
+
 # Coding assignment
 ## Parallelize the serial pi program from the first lecture by adding only a single line.
 Already done in week 1.
