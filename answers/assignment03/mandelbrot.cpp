@@ -29,9 +29,13 @@ int main() { // generate mandelbrot pgm (portable graymap)
   ofstream image(image_name); // file output stream
   if (image.is_open()) {
     image << "P2\n" << width << " " << height << " 255\n"; // pgm header
+    // the problem for parallelization is the required order
+    #pragma omp parallel for default(none) shared(image) ordered schedule(dynamic) collapse(2)
     for (int i = 0; i < height; i++) {
       for (int j = 0; j < width; j++) {
-        image << compute_pixel(j, i) << "\n"; // write pixel value
+        const auto value = compute_pixel(j, i);
+        #pragma omp ordered
+        image << value << "\n"; // write pixel value
       }
     }
     image.close(); // close file output stream
