@@ -1,3 +1,10 @@
+# How does the ordered clause in OpenMP work in conjunction with a parallel for loop?
+This construct can be used to force OpenMP run the for loop in the same ordering it would have in a single-threaded environment.
+To use it, two steps are required:
+First, specify `ordered` in the `#pragma omp for` clause at beginning, indicating that there is some ordered region inside the for loop.
+Second, mark that region with `#pragma omp ordered`.
+Note that it can hurt performance if this construct is not used carefully.
+
 # What is the collapse clause in OpenMP good for?
 For loop parallelization with `pragma omp parallel for` by default only affects one loop in a nested loop scenario (the one that directly follows the clause).
 If it has only a few number of iterations, the performance gain can be low.
