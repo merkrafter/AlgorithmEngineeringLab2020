@@ -32,6 +32,32 @@ It always outputs 1 as the reduction variable `sum` is initialized to the + oper
 
 Further reading: [utexas.edu](https://pages.tacc.utexas.edu/~eijkhout/pcse/html/omp-reduction.html)
 
+# Clarify how the storage attributes `private` and `firstprivate` differ from each other.
+The main difference is how the values specified are initialized.
+`private` variables are uninitialized, local versions of the declared variables.
+Hence
+```cpp
+int x = 10;
+#pragma omp parallel private(x)
+std::cout << x;
+```
+likely returns 0, but not 10, as the local version of x is not initialized.
+This is useful if x is huge and cloning it would be costly.
+
+In contrast, `firstprivate` initializes the local version with a copy of the specified variable, that is
+```cpp
+int x = 10;
+#pragma omp parallel firstprivate(x)
+std::cout << x;
+```
+will print 10.
+
+Note: `firstprivate` should not be used for types that have a deleted copy constructor.
+The [msvc compiler documentation](https://docs.microsoft.com/en-us/cpp/parallel/openmp/2-directives?view=msvc-160#27-data-environment) says under 2.7.2.2 that `firstprivate` *can not* be applied to non-copyable types while gcc 10.2.1 accepts types with a deleted copy constructor without complaining.
+When using such type as a `firstprivate` variable, one at least creates a compatibility issue.
+Moreover, this could lead to resource leaks or multiple frees, if some OpenMP implementation calls the destructor on the `firstprivate` type (which gcc does not do, fortunately).
+Again, this is subject to implementation specifics, as some [forum threads](https://community.intel.com/t5/Intel-C-Compiler/OpenMP-firstprivate-and-C-object-destruction/td-p/773088) show.
+
 # Coding assignment
 ## Parallelize the serial pi program from the first lecture by adding only a single line.
 Already done in week 1.
