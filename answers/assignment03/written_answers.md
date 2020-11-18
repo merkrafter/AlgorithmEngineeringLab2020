@@ -46,6 +46,14 @@ Explicit barriers can be placed in the code via `pragma omp barrier` while impli
 Implicit barriers are always created at the end of `parallel` clauses.
 Hence, no thread can "escape" a parallel region; all threads are joined at the end of it.
 
+# Explain the difference between `omp_get_num_threads`, `omp_get_num_procs` and `omp_get_max_threads`.
+`omp_get_num_procs` returns the number of logical cores.
+It depends on the machine the program is running on.
+
+`omp_get_num_threads` returns the number of threads OMP currently uses.
+It can be modified for instance by environment variables, previous library routines or explicit statements to use a certain number of threads like a `#pragma omp parallel num_threads(1)` clause.
+`omp_get_max_threads` returns the value set by the last call to `omp_set_num_threads`, but is not affected by, say, `#pragma omp parallel num_threads(1)`.
+
 # Clarify how the storage attributes `private` and `firstprivate` differ from each other.
 The main difference is how the values specified are initialized.
 `private` variables are uninitialized, local versions of the declared variables.
