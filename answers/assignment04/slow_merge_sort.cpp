@@ -31,19 +31,25 @@ inline void merge(const int *__restrict__ a, const int *__restrict__ b,
   }
 }
 
-void merge_sort_naive(int *arr, int n) { // slow merge sort
+void merge_sort_tasked(int *arr, int n) { // slow merge sort
   if (n > 1) { // TODO: use insertion sort for small n
     const int size_a = n / 2;
     const int size_b = n - size_a;
-    // TODO: make next recursive call a task
-    merge_sort_naive(arr, size_a); // recursive call
-    merge_sort_naive(arr + size_a, size_b); // recursive call
-    // TODO: here should be a taskwait
+    #pragma omp task if (n > 5000)
+    merge_sort_tasked(arr, size_a); // recursive call
+    merge_sort_tasked(arr + size_a, size_b); // recursive call
+    #pragma omp taskwait
     int *c = new int[n]; // TODO: avoid using heap for small n
     merge(arr, arr + size_a, c, size_a, size_b, n);
     memcpy(arr, c, sizeof(int) * n);
     delete[](c);
   }
+}
+
+void merge_sort(int *arr, int n) {
+#pragma omp parallel
+#pragma omp single nowait
+  merge_sort_tasked(arr, n);
 }
 
 int main(int argc, char *argv[]) {
@@ -52,8 +58,8 @@ int main(int argc, char *argv[]) {
   vector<int> v_copy = v;
 
   double start = omp_get_wtime();
-  merge_sort_naive(v.data(), n);
-  cout << "naive: " << omp_get_wtime() - start << " seconds" << endl;
+  merge_sort(v.data(), n);
+  cout << "tasked: " << omp_get_wtime() - start << " seconds" << endl;
 
   start = omp_get_wtime();
   sort(begin(v_copy), end(v_copy));
