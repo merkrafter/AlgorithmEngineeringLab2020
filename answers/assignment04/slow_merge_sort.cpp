@@ -31,41 +31,46 @@ inline void merge(const int *__restrict__ a, const int *__restrict__ b,
   }
 }
 
-void insertion_sort(int *arr, const int n) {
+void insertion_sort(int *arr, const int n, int *out) {
   for (int i = 0; i < n; i++) {
     const int curr_val = arr[i];
     int j = i;
-    while (j > 0 && arr[j-1] > curr_val) {
+    while (j > 0 && out[j-1] > curr_val) {
+      out[j] = out[j-1];
       arr[j] = arr[j-1];
       j--;
     }
+    out[j] = curr_val;
     arr[j] = curr_val;
   }
 }
 
-void merge_sort_tasked(int *arr, int n) { // slow merge sort
+void merge_sort_tasked_prealloc(int *arr, int n, int *buffer) { // slow merge sort
   if (n > 1) {
     if (n < 32) {
-      insertion_sort(arr, n);
+      insertion_sort(arr, n, buffer);
       return;
     }
     const int size_a = n / 2;
     const int size_b = n - size_a;
+
+    // attention: swap roles of buffer and arr below to
+    // avoid copies from buffer to arr
     #pragma omp task if (n > 5000)
-    merge_sort_tasked(arr, size_a); // recursive call
-    merge_sort_tasked(arr + size_a, size_b); // recursive call
+    merge_sort_tasked_prealloc(buffer, size_a, arr); // recursive call
+    merge_sort_tasked_prealloc(buffer + size_a, size_b, arr + size_a); // recursive call
     #pragma omp taskwait
-    int *c = new int[n]; // TODO: avoid using heap for small n
-    merge(arr, arr + size_a, c, size_a, size_b, n);
-    memcpy(arr, c, sizeof(int) * n);
-    delete[](c);
+    merge(arr, arr + size_a, buffer, size_a, size_b, n);
   }
 }
 
 void merge_sort(int *arr, int n) {
+int *buffer = new int[n];
 #pragma omp parallel
 #pragma omp single nowait
-  merge_sort_tasked(arr, n);
+  merge_sort_tasked_prealloc(arr, n, buffer);
+memcpy(arr, buffer, sizeof(int) * n);
+delete[](buffer);
 }
 
 int main(int argc, char *argv[]) {
