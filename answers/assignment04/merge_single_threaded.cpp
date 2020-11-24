@@ -73,7 +73,7 @@ inline void merge_dac(_Type *t1, _Type *t2, int64_t p1, int64_t r1, int64_t p2,
     int64_t q3 = p3 + (q1 - p1) + (q2 - p2);
     a[q3] = t1[q1];
 
-    // TODO: parallelize the first recursive call with a task
+    #pragma omp task
     merge_dac(t1, t2, p1, q1 - 1, p2, q2 - 1, a, p3, __comp);
     merge_dac(t1, t2, q1 + 1, r1, q2, r2, a, q3 + 1, __comp);
   }
@@ -82,8 +82,9 @@ inline void merge_dac(_Type *t1, _Type *t2, int64_t p1, int64_t r1, int64_t p2,
 template <class _Type, class _Compare>
 void parallel_merge(_Type *arr1, _Type *arr2, _Type *out, 
 		  int64_t size1, int64_t size2, int n_threads, _Compare __comp) {
-  // TODO: parallelize merge_dac, use n_threads as the amount of threads
-  // for the parallel region
+  omp_set_num_threads(n_threads);
+  #pragma omp parallel
+  #pragma omp single nowait
   merge_dac(arr1, arr2, 0, size1 - 1, 0, size2 - 1, out, 0, __comp);
 }
 

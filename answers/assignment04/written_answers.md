@@ -22,3 +22,16 @@ One downside of this approach is that the roles of `buffer` and `arr` must be sw
 ```
 tasked: 15.4638 seconds
 ```
+
+## Parallelize merging on page 18 with tasks.
+initially:
+```
+custom merge: 1.05584 seconds
+__gnu_parallel::merge: 2.41423 seconds
+std::merge: 3.68582 seconds
+```
+
+After implementing the suggested improvements, the following time was achieved:
+```
+custom merge: 0.404156 seconds
+```
