@@ -31,8 +31,24 @@ inline void merge(const int *__restrict__ a, const int *__restrict__ b,
   }
 }
 
+void insertion_sort(int *arr, const int n) {
+  for (int i = 0; i < n; i++) {
+    const int curr_val = arr[i];
+    int j = i;
+    while (j > 0 && arr[j-1] > curr_val) {
+      arr[j] = arr[j-1];
+      j--;
+    }
+    arr[j] = curr_val;
+  }
+}
+
 void merge_sort_tasked(int *arr, int n) { // slow merge sort
-  if (n > 1) { // TODO: use insertion sort for small n
+  if (n > 1) {
+    if (n < 32) {
+      insertion_sort(arr, n);
+      return;
+    }
     const int size_a = n / 2;
     const int size_b = n - size_a;
     #pragma omp task if (n > 5000)
