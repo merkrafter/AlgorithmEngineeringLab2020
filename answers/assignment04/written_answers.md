@@ -1,3 +1,12 @@
+# Explain how divide and conquer algorithms can be parallelized with tasks in OpenMP.
+```
+In computer science, divide and conquer is an algorithm design paradigm based on multi-branched recursion. A divide-and-conquer algorithm works by recursively breaking down a problem into two or more sub-problems of the same or related type, until these become simple enough to be solved directly. The solutions to the sub-problems are then combined to give a solution to the original problem.
+```
+(Wikipedia)
+As the definition states, divide and conquer algorithms typically involve recursion with small(er) work packages.
+A small piece of work can be modeled with OpenMPs tasks.
+Instead of being executed immediately, they are enqueued and worked on as soon as a thread requests a piece of work.
+
 # Coding warmup
 ## Speed up merge sort on page 7.
 initially:
