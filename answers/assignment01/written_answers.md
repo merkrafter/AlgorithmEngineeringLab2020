@@ -87,7 +87,9 @@ $> make pirallel
 $> ./pirallel
 pi with 100000000 steps is 3.1415926535904264 in 0.768738 seconds
 ```
-Result after parallelization:
+Note that this time does not improve if `-O2` is passed to the compiler, so some kind of optimum seems to be reached here.
+
+The parallel version yields results as expected:
 ```bash
 $> make pirallel
 $> OMP_NUM_THREADS=1 ./pirallel
@@ -98,6 +100,35 @@ $> OMP_NUM_THREADS=4 ./pirallel  # does not give any advantage on my machine
 pi with 100000000 steps is 3.1415926535896825 in 0.383342 seconds
 ```
 
+For comparison, the pirallel program was reimplemented in Rust.
+The main part could be rewritten the following way:
+```rust
+let sum: f64 = (0..NUM_STEPS)
+    .map(|i| ((i as f64) + 0.5) * WIDTH)
+    .map(|x| 1.0 / (1.0 + x * x))
+    .sum();
+```
+Rust's compiler outputs rich debug binaries whose run times are terribly high (around 7 seconds in this case).
+However, in release mode, the binary reaches the same ~0.77 seconds that the C++ version runs, regardless of the functional-styled syntax.
+
+To parallelize this program as minimally invasive as it is possible with OpenMP, Rust programmers use the rayon crate.
+It is not as powerful as OpenMP in the sense that it does not allow as fine-grained configuration, but that is not necessary here anyway.
+The parallel version looks like this:
+```rust
+use rayon::prelude::*;
+...
+let sum: f64 = (0..NUM_STEPS)
+    .into_par_iter()  // just this line added
+    .map(|i| ((i as f64) + 0.5) * WIDTH)
+    .map(|x| 1.0 / (1.0 + x * x))
+    .sum();
+```
+The easiest way to compile this is wrapping it in a [cargo](https://doc.rust-lang.org/stable/cargo/) project and add rayon as a dependency.
+Now, the runtime is reduced to 0.385 seconds as well.
+
+C++, though, has one more trick up its sleeve: `-Ofast`.
+This enables optimizations on floating point arithmetic that is not necessarily compliant with the IEEE 754 standard.
+On the other hand, there's one more speedup by a factor of 2 possible:
 ```bash
 $> make pirallel_opt
 $> OMP_NUM_THREADS=1 ./pirallel_opt # it's as fast as the dual-thread version above
