@@ -1,3 +1,4 @@
+use rayon::prelude::*;
 use std::time::Instant;
 
 fn main() {
@@ -7,6 +8,7 @@ fn main() {
     let start_time = Instant::now(); // monotonically increasing clock
 
     let sum: f64 = (0..NUM_STEPS)
+        .into_par_iter()
         .map(|i| ((i as f64) + 0.5) * WIDTH)
         .map(|x| 1.0 / (1.0 + x * x))
         .sum();
