@@ -63,6 +63,21 @@ One downside of this approach is that the roles of `buffer` and `arr` must be sw
 tasked: 15.4638 seconds
 ```
 
+Eventually, with `-O3` specified, the following result an be obtained:
+```
+tasked: 8.16683 seconds (15.2315 seconds with a single thread)
+std::sort: 11.3915 seconds
+```
+
+Now this is compared to Rust again.
+Therefore, an initial implementation is provided that can be found in `merge_sort.rs`.
+It has a runtime similar to the single-threaded, optimized implementation above.
+```
+naive: 15.276 seconds
+Vec::sort: 10.193 seconds
+```
+
+
 ## Parallelize merging on page 18 with tasks.
 initially:
 ```
