@@ -1,4 +1,5 @@
 use rand::prelude::*;
+use rayon::prelude::*;
 use std::time::Instant;
 
 fn get_random_int_vector(n: u32) -> Vec<u32> {
@@ -54,8 +55,10 @@ fn merge_sort_tasked_prealloc(mut arr: &mut [u32], mut buffer: &mut [u32]) {
         let middle_idx = arr.len() / 2;
         let (buffer_low, buffer_high) = buffer.split_at_mut(middle_idx);
         let (arr_low, arr_high) = arr.split_at_mut(middle_idx);
-        merge_sort_tasked_prealloc(buffer_low, arr_low);
-        merge_sort_tasked_prealloc(buffer_high, arr_high);
+        rayon::join(
+            || merge_sort_tasked_prealloc(buffer_low, arr_low),
+            || merge_sort_tasked_prealloc(buffer_high, arr_high),
+        );
 
         merge(&arr[..middle_idx], &arr[middle_idx..], &mut buffer);
     }
@@ -75,13 +78,13 @@ fn main() {
     let start = Instant::now();
     merge_sort(&mut v);
     println!(
-        "naive: {:} seconds",
+        "tasked: {:} seconds",
         (start.elapsed().as_millis() as f64) / 1000.0
     );
     let start = Instant::now();
-    v_copy.sort();
+    v_copy.par_sort();
     println!(
-        "Vec::sort: {:} seconds",
+        "Vec::par_sort: {:} seconds",
         (start.elapsed().as_millis() as f64) / 1000.0
     );
 

@@ -77,6 +77,17 @@ naive: 15.276 seconds
 Vec::sort: 10.193 seconds
 ```
 
+The parallelization is implemented via rayon's `join` function.
+It takes 2 closures (aka lambda expressions), puts them both in a working queue and usually starts executing the first of them while other threads may execute the second one.
+After the main thread finished its task, it [steals](https://en.wikipedia.org/wiki/Work_stealing) the task from a second thread if possible or waits otherwise.
+Using this technique, the runtime can be cut in half as shown below.
+Rayon also defines the functions `par_sort` and `par_sort_unstable` on the vector (unstable sorting is certainly not a problem for simple numbers).
+Compared to those, my naive implementation has quite some room for improvement.
+```
+tasked: 7.247 seconds
+Vec::par_sort: 5.162 seconds
+Vec::par_sort_unstable: 2.737 seconds
+```
 
 ## Parallelize merging on page 18 with tasks.
 initially:
