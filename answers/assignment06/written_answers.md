@@ -42,3 +42,17 @@ fn add(dst_arr: &mut [f32], src_arr: &[f32]) {
 Memory is said to be accessed *strided* if there is a constant distance between accessed memory locations.
 This distance is called the stride, where *unit stride* refers to a stride of 1 (contiguous access).
 Unit stride access makes it far easier for compilers to vectorize loops as the memory (e.g. an array) can be copied over to the vector registers and does not have to be gathered from locations that are far away from each other and then packed into the vector registers.
+
+# When would you prefer arranging records in memory as Structure of Arrays?
+The answer to this question is closely connected to the previous question: it depends on the memory access pattern.
+If computation has to be done over a field of a struct for a whole array of those structs, the access to that field is strided with -- given that the struct has more than one field -- a non-unit stride.
+Hence, it can hurt performance, because it might prevent auto-vectorization.
+In that case, the data structure might better be represented as a structure of arrays, in which the field of interest lies contiguously in memory.
+This, however, comes at the cost of slowing down access to elements *inside* a single struct, because its fields are now far away from each other.
+
+The effect can be seen in the file `soa_vs_aos.cpp`.
+Here, if one compares the assembly output of both functions, one can clearly see that the soa function is vectorized (`*ps` instructions) while the aos function is not (`*ss` instructions).
+
+Interestingly, this behavior is affected by the fact that `Point` represents a point in 3 dimensions which is not a factor of the vector register size.
+If `Point` is defined to be a 2D point, the `x` and `y` coordinates of `a` and `b` are packed into the vector registers and SIMD instructions will be used in this case.
+The same can be observed in Rust, even when using a functional styled computation (`aos.rs`).
