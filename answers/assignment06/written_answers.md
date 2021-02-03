@@ -37,3 +37,8 @@ fn add(dst_arr: &mut [f32], src_arr: &[f32]) {
     }
 }
 ```
+
+# What are the advantages of unit stride memory access compared to accessing memory with larger strides?
+Memory is said to be accessed *strided* if there is a constant distance between accessed memory locations.
+This distance is called the stride, where *unit stride* refers to a stride of 1 (contiguous access).
+Unit stride access makes it far easier for compilers to vectorize loops as the memory (e.g. an array) can be copied over to the vector registers and does not have to be gathered from locations that are far away from each other and then packed into the vector registers.
