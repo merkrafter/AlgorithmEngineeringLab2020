@@ -6,10 +6,15 @@ Hence, unaligned input arrays must be peeled off at the beginning before vector 
 How much peeling is necessary depends on the vector width.
 Passing the (in other parts of the program) ensured alignment can help the compiler make better decisions, or can remove the necessecity to peel off altogether.
 ## Vector length preference
-`simdlen` and `safelen`
-  - suboptimal choice won't make false results
-  - `safelen` sets an upper bound
-- data-sharing attributes with `reduction`
+- `simdlen` suggests a number of concurrently processed elements to the compiler.
+  Suboptimal choices will not lead to false results (compared to the simd pragma without a `simdlen` clause).
+  It usually is not necessary to specify this.
+ - `safelen` sets an upper bound for the number of concurrently processed elements.
+   This can be necessary to ensure correctness of a vectorized implementation.
+
+## Data-sharing attributes
+The data-sharing attributes for `#pragma omp simd` are actually the same as for the parallel pragma.
+Specifically, the important clauses `private`, `firstprivate` and `reduction` work as described in [assignment 03](../assignment03/written_answers.md#clarify-how-the-storage-attributes-private-and-firstprivate-differ-from-each-other).
 
 # Give reasons that speak for and against vectorization with intrinsics compared to guided vectorization with OpenMP
 OpenMP pragmas have several advantages over intrinsics when it comes to vectorization.
