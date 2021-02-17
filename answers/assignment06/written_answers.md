@@ -22,7 +22,7 @@ void add(float* a, const float* b, const int n) {
 ```
 This may look like perfectly vectorizable code, but the function does not prevent users from calling it like `add(a, a+1)`.
 Note that now there are data dependencies between consecutive loop iterations that vector instructions can not deal with.
-Therefore, the compiler needs a hint by the programmer, that the memory reasons do not overlap.
+Therefore, the compiler needs a hint by the programmer that the memory regions do not overlap.
 In C/C++, this is usually done with the `restrict` type qualifier (or respective compiler extensions).
 If a pointer `p` is marked as `restrict`, all modifications to the memory region pointed to by `p` must happen through `p`.
 In the example above, `a` can be marked with `__restrict__` to enable auto-vectorization of the loop.
