@@ -78,7 +78,7 @@ Through other vulnerabilities as format strings, an attacker could leak the cana
 # Coding assignment
 ## Warm up
 To parallelize the pi program on slide 17, I used the OMP directive `reduction`.
-It can be seen in commit `28fe5dcd76e251f`.
+It can be seen in commit 28fe5dcd76e251f.
 This way, I avoid synchronization of each single access to a shared `sum` variable.
 Instead, each thread now has an own `sum` variable that is summed up with the ones from other threads in the end.
 Result before parallelization:
