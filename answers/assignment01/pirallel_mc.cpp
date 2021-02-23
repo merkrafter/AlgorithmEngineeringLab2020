@@ -5,15 +5,14 @@
 using namespace std;
 
 int main() {
-  int n = 100000000; // amount of points to generate
+  constexpr int n = 100000000; // amount of points to generate
   int counter = 0;   // counter for points in the first quarter of a unit circle
   auto start_time =
       omp_get_wtime(); // omp_get_wtime() is an OpenMP library routine
 
 #pragma omp parallel default(none) shared(n) reduction(+ : counter)
   {
-    random_device rd;
-    unsigned int seed = rd();
+    const unsigned int seed = omp_get_num_threads();
     default_random_engine re{seed};
     uniform_real_distribution<double> zero_to_one{0.0, 1.0};
 

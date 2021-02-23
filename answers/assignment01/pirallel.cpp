@@ -5,8 +5,8 @@
 using namespace std;
 
 int main() {
-  int num_steps = 100000000;              // amount of rectangles
-  double width = 1.0 / double(num_steps); // width of a rectangle
+  constexpr int num_steps = 100000000;              // amount of rectangles
+  constexpr double width = 1.0 / double(num_steps); // width of a rectangle
   double sum = 0.0; // for summing up all heights of rectangles
 
   double start_time = omp_get_wtime(); // wall clock time in seconds
