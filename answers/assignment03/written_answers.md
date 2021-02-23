@@ -8,8 +8,9 @@ Note that it can hurt performance if this construct is not used carefully.
 # What is the collapse clause in OpenMP good for?
 For loop parallelization with `pragma omp parallel for` by default only affects one loop in a nested loop scenario (the one that directly follows the clause).
 If it has only a few number of iterations, the performance gain can be low.
-Also, this behavior reduces the power of the `schedule(dynamic)` clause as the workload for each thread is much higher if it has to compute whole inner loops.
-Therefore, one can linearize the nested loop with the `collapse` clause which mitigates these problems.
+This is especially true if the number of loop iterations is lower than the possible number of threads, because then not all of them will be started.
+This behavior moreover reduces the power of the `schedule(dynamic)` clause as the workload for each thread is much higher if the inner loops are long-running and/or inbalanced.
+Therefore, one can linearize the nested loops with the `collapse` clause which mitigates these problems.
 
 # Explain how reductions work internally in OpenMP.
 The syntax of a reduction is `reduction(op:list)` where `op` is one of `+, -, *, min, max, &, |, ^, &&`, and `||`, that is commutative, associative operators (`-` computes `-x-y` for two values `x` and `y`).
