@@ -64,7 +64,7 @@ int x = 10;
 #pragma omp parallel private(x)
 std::cout << x;
 ```
-likely returns 0, but not 10, as the local version of x is not initialized.
+likely returns 0 (but it is undefined behavior), as the local version of x is not initialized.
 This is useful if x is huge and cloning it would be costly.
 
 In contrast, `firstprivate` initializes the local version with a copy of the specified variable, that is
