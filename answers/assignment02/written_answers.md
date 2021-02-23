@@ -50,7 +50,7 @@ The simplicity of this approach can be seen with the following setup:
   const int num_threads = omp_get_num_threads();
 // WARNING: faulty distribution of work
 #pragma omp for schedule(static)
-  for(int i = thread_id; i < 1000; i+= number_threads) {
+  for(int i = thread_id; i < 1000; i+= num_threads) {
     if(thread_id==2) {
       std::cout << i << std::endl;
     }
