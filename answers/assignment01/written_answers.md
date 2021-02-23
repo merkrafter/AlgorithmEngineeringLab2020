@@ -8,6 +8,13 @@ In fork-join parallelism, there are points where a program, for instance, starts
 # Herb Sutter's article *The free lunch is over*
 ## What new CPU technologies does Sutter report?
 "Processor manufacturers [...] are [...] turning [...] to hyperthreading and multicore architectures"
+Multicore means that two or more CPU cores are placed on the same chip.
+All of these cores have their own registers, caches, arithmetic units, etc.
+In contrast, hyperthreading allows the handling of multiple threads by every one core.
+However, the cores don't have duplicate hardware features, meaning that hyperthreading can not normally be used to double the performance.
+Its strengths lie in I/O-heavy situations where threads spend much of their time waiting for copy operations to finish, for instance.
+Then other threads on the same core can take over really fast and do something useful meanwhile.
+
 ## Can we have a free lunch again if we exploit them in our applications?
 In my opinion, a general free lunch is not possible anymore.
 I do think, however, that we can have a pretty cheap lunch.
