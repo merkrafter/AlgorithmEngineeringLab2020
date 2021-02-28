@@ -1,0 +1,231 @@
+% arara: lualatex
+% arara: bibtex
+% arara: lualatex
+% arara: lualatex
+% arara: clean: {files:[paper.aux, paper.bbl, paper.blg, paper.log, paper.out]}
+
+\documentclass[sigconf]{acmart}
+\usepackage{booktabs}
+\usepackage{tikz}
+\usetikzlibrary{matrix.skeleton}
+
+\newcommand{\bl}{\node [circle, minimum size=0.7cm, draw=black, fill=blue!65!white, thin]{};}
+\newcommand{\wh}{\node [rectangle, minimum size=0.7cm, draw=black, fill=yellow] {};}
+
+
+%% \BibTeX command to typeset BibTeX logo in the docs
+\AtBeginDocument{%
+  \providecommand\BibTeX{{%
+    \normalfont B\kern-0.5em{\scshape i\kern-0.25em b}\kern-0.8em\TeX}}}
+
+%% These commands are for a PROCEEDINGS abstract or paper.
+\settopmatter{printacmref=false} % Removes citation information below abstract
+\renewcommand\footnotetextcopyrightpermission[1]{} % removes footnote with conference information in 
+
+\acmConference[AELAB 2021]{AELAB 2021: Algorithm Engineering LAB Projects}{March 1}{Jena, Germany}
+
+% convert text to title case
+% http://individed.com/code/to-title-case/
+
+% that helps you to formulate your sentences
+% https://www.deepl.com/translator
+
+\begin{document}
+
+\title[San Jego]{Efficient Bot for The Game of San Jego\\\large Algorithm Engineering LAB 2021 Project Paper}
+
+\author{Mark Umnus}
+\affiliation{%
+  \institution{Friedrich Schiller University Jena}
+  \country{Germany}}
+\email{mark.umnus@uni-jena.de}
+
+%% The abstract is a short summary of the work to be presented in the article.
+\begin{abstract}
+
+The five-finger pattern \cite{macgilchrist2014}:
+\begin{enumerate}
+\item \textbf{Topic and background:} What topic does the paper deal with? What is the point of departure for your research? Why are you studying this now?
+\item \textbf{Focus:} What is your research question? What are you studying precisely?
+\item \textbf{Method:} What did you do?
+\item \textbf{Key findings:} What did you discover?
+\item \textbf{Conclusions or implications:} What do these findings mean? What broader issues do they speak to?
+\end{enumerate}
+
+
+\end{abstract}
+
+%%
+%% Keywords. The author(s) should pick words that accurately describe
+%% the work being presented. Separate the keywords with commas.
+\keywords{entity resolution, data cleansing, programming contest}
+
+
+%%
+%% This command processes the author and affiliation and title
+%% information and builds the first part of the formatted document.
+\maketitle
+
+\let\thefootnote\relax\footnotetext{AELAB 2021, March 1, Jena, Germany. Copyright \copyright 2021 for this paper by its authors. Use permitted under Creative Commons License Attribution 4.0 International (CC BY 4.0).}
+
+
+\section{Introduction}
+
+San Jego is a deterministic board game for two players (blue and yellow) that both have perfect information.
+At the beginning of the game, the board (of arbitrary size) is filled with bricks in the colors of the players in a checkerboard-like pattern.
+From now on, these bricks will be treated as \emph{towers of height 1}.
+The players move alternatingly by choosing a \emph{source} tower that has a top brick in the color of the active player, and placing it onto an adjacent \emph{target} tower.
+As a result, the source field is now empty and the target field contains a tower whose height is equal to the sum of the heights of the source and target tower and whose top brick still has a color equal to the player that just made the move.
+A player must \emph{skip}, if there is no legal move as outlined above.
+In that case, the other player may make moves as long as legally possible.
+After that, the game is over with the winner being the player with the highest tower on the board.
+
+
+\subsection{Background}
+
+\subsection{Related Work}
+San Jego must be viewed in the broader context of board game research.
+Engines for these games typically perform three kinds of actions: move generation, search and evaluation \cite{Bimonugroho2020}.
+% more on that
+
+For instance in chess, relevant features of the board are commonly represented as bitboards where each field corresponds to one bit in a 64 bit integer \cite{Bimonugroho2020}.
+One such bitboard may track the fields that have black pieces on them, and another one may track the positions of knights.
+Finding all black knights on the board is now as efficient as computing a bitwise AND of these two bitboards.
+
+This particular game has not received much attention yet.
+Major contributions were made by \citeauthor{Althöfer2020} \cite{Althöfer2020}.
+
+\subsection{Our Contributions}
+\begin{itemize}
+  \item San Jego library
+  \item think of a representation
+\end{itemize}
+
+\subsection{Outline}
+The following section discusses key properties of the game, including ones that can be exploited for an efficient implementation, and those that restrict common optimizations in one way or another.
+
+\section{Observations}
+\paragraph{Symmetry}
+As already mentioned, the game can be played on rectangular boards of arbitrary sizes.
+This makes it difficult to apply size-specific optimizations like bitboards.
+However, independent of its shape, the game board is symmetrical along both axes.
+This means that on a $3\times3$ board, say, moving the center tower up or down in the first turn yields equivalent game states.
+In addition, square boards are rotationally symmetrical, that is on this particular board, moving the center tower left or right also yields states equivalent to the ones mentioned before.
+So far, openings have not been studied deeply, and no best first move has been discovered for arbitrary board shapes.
+Therefore, exploiting the symmetries is the main tool for reducing the number of moves to consider in the first turns.
+They allow to ignore roughly half the moves on average.
+On square boards and boards with only odd side lengths, another factor of ca. $0.5$ can be ignored, respectively.
+The proof and exact numbers are not provided here, however, as they are too verbose for this paper.
+Moreover, by exploiting symmetries it is possible to build and store tables of interesting positions more effectively.
+
+\paragraph{Isolation}
+The game rules state that towers can only be placed on top of other towers.
+In particular, they must not be moved to fields that are already empty.
+Several consequences follow from this.
+First, the number of towers is an upper bound for the overall number of moves in a game as with each move the number of towers on the board must decrease by one (the number of towers $-1$ to be precise, as there is no legal move with only one tower on the board).
+This can possibly be used for time management to estimate the remaining length of a game.
+Second, if a player at some point has no legal move left, they have to skip.
+In this situation it is clear that none of their towers has an adjacent tower, otherwise skipping is not allowed.
+It follows that also in the future progression of the game, none of the skipping player's towers will be able to move.
+At this point, the evaluation module does not have to search a game tree anymore, but only count the maximum height reachable for the player that is still active.
+
+%\begin{center}
+%\begin{tikzpicture}
+%\matrix (m) [matrix of nodes, style grid={draw}, nodes in empty cells, label skeleton, row sep=2mm, column sep=2mm, nodes={minimum size = 0.8cm}] {
+% \bl & \bl & \bl  \\ % for some reason this only works with an empty cell
+% \wh &     & \wh  \\ 
+% \bl & \wh & \bl  \\
+%};
+%\end{tikzpicture}
+%\end{center}
+
+\begin{itemize}
+  %\item board is symmetrical and rotationally invariant -> speed up start
+  %\item towers can not move to empty fields -> each turn a tower is removed -> max number of turns is fixed and depends on board size
+  \item moves to center of boards are more powerful on average \cite{Althöfer2020}
+  \item if a player had to skip once, there will never be a move available to them again
+  \item isolated regions
+\end{itemize}
+
+\section{The Algorithm}
+\begin{itemize}
+  \item tower representation
+  \item fit board in cache line and align
+  \item use vector SIMD to compute board value
+  \item use map instead of array for sparse boards in end game
+  \item use opening table
+  \item traverse game tree in parallel
+\end{itemize}
+
+\subsection{Internal Representation of Mock Labels}
+\label{sub:sec:internal}
+
+In Figure~\ref{fig:integer:sets} we convert the mock labels to sorted integer sets.
+
+
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./graphics/integer_sets.pdf}
+  \caption{Conversion of mock camera labels to sorted integer sets. 
+We map each unique token (key) in camera labels to a unique value. 
+Based on these key-value-mappings, we convert camera labels to sorted integer sets. 
+A camera can have different names in different countries. Therefore, repeating IDs reference the same cameras (see, for example, ID=3).} 
+  \label{fig:integer:sets}
+\end{figure}
+
+\subsection{Efficient Preprocessing of Input Data}
+\label{sub:sec:preprocessing}
+
+The following findings are important to speed up preprocessing of the input data:
+
+\begin{itemize}
+\item Reading many small files concurrently, with multiple threads (compared to a single thread), takes advantage of the internal parallelism of SSDs and thus leads to higher throughput \cite{Zhuang2016}.
+
+\item C-string manipulation functions are often significantly faster than their C++ pendants. For example, locating substrings with \texttt{strstr} is around five times faster than using the C++ \texttt{std::string} function \texttt{find}.
+
+\item Hardcoding regular expressions with \emph{while, for, switch} or \emph{if-else} statements results in faster execution times than using standard RegEx libraries, where regular expressions are compiled at runtime into state machines.
+
+\item Changing strings in place, instead of treating them as immutable objects, eliminates allocation and copying overhead.
+
+\end{itemize}
+
+
+\section{Experiments}
+
+Table~\ref{tab:results} shows the running times of the resolution step of the five best placed teams.
+
+
+\begin{table}[htbp]
+  \caption{Comparison of the F-measure and the running times of the resolution step of the five best placed teams. The input data for the resolution step consisted of 29{,}787 in JSON formatted e-commerce websites. Measurements were taken on a
+laptop running Ubuntu 19.04 with 16 GB of RAM and two Intel Core i5-4310U CPUs. The underlying SSD was a 500\,GB 860 EVO mSATA. We cleared the page cache, dentries, and inodes before each run to avoid reading the input data from RAM instead of the SSD.}
+  \label{tab:results}
+\resizebox{\columnwidth}{!}{
+  \begin{tabular}{lcrr}
+    \toprule
+    Team& Language & F-measure & Running time (s)\\
+    \midrule
+	PictureMe (\textbf{this paper}) &C++& 0.99 & \textbf{0.61}\\
+    DBGroup@UniMoRe &Python& 0.99 & 10.65\\
+    DBGroup@SUSTech &C++& 0.99 & 22.13\\
+    eats\_shoots\_and\_leaves &Python& 0.99 & 28.66\\
+    DBTHU &Python& 0.99& 63.21\\
+  \bottomrule
+\end{tabular}
+}
+\end{table}
+
+
+\section{Conclusions}
+
+%%
+%% The next two lines define the bibliography style to be used, and
+%% the bibliography file.
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{literature}
+
+
+\end{document}
+\endinput
+%%
+%% End of file `sample-sigconf.tex'.
