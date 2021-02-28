@@ -73,25 +73,37 @@ As a result, the source field is now empty and the target field contains a tower
 A player must \emph{skip}, if there is no legal move as outlined above.
 In that case, the other player may make moves as long as legally possible.
 After that, the game is over with the winner being the player with the highest tower on the board.
-
+If it's a tie, the game ends with a draw.
 
 \subsection{Background}
+Computer games have always been an important driver of technology, see for instance graphics cards.
+Also, from the very early days, game playing computer programs have been a favored field to develop new high-performance algorithms in \cite{Shannon1950}.
+Combinatorial games are especially interesting for algorithm engineering, as they require a mix from both clever algorithms and efficient implementation, while providing a ground for comparable results due to the lack of randomness.
 
 \subsection{Related Work}
-San Jego must be viewed in the broader context of board game research.
+San Jego must be viewed in the broader context of combinatorial game research which has a long history.
 Engines for these games typically perform three kinds of actions: move generation, search and evaluation \cite{Bimonugroho2020}.
-% TODO more on that
+The first of these steps provides a number of possible moves for the current game state.
+Evaluation assigns a score to each encountered state, identifying favorable ones.
+Search is then the overall process of applying generation and evaluation to find a move that leads to a desirable state in the future (usually a win or at least a draw).
 
+While move generation and evaluation highly depend on the game at hand, general search algorithms have been developed.
+The ones with the widest adoption and best results as of now are tree search algorithms.
+They represent a game and the sequence of moves and states as a directed graph that usually forms a tree.
+As for non-trivial games the number of possible game states is quite high, efficient data structures are required.
 For instance in chess, relevant features of the board are commonly represented as bitboards where each field corresponds to one bit in a 64 bit integer \cite{Bimonugroho2020}.
 One such bitboard may track the fields that have black pieces on them, and another one may track the positions of knights.
 Finding all black knights on the board is now as efficient as computing a bitwise \texttt{AND} of these two bitboards.
 
-This particular game has not received much attention yet.
-Major contributions were made by \citeauthor{Althöfer2020} \cite{Althöfer2020}.
+This particular game of San Jego has not received much attention yet, but it bears potential for interesting optimizations explained later in this paper.
+Major contributions to the theory of San Jego were made by \citeauthor{Althöfer2020} \cite{Althöfer2020}.
 They proved an upper bound for the game state complexity, the branching behavior, and precise values for games on small boards.
 The optimal move lines that lead to these values were not published, though.
 
+San Jego research somewhat profits from the research on the related game Clobber (e.g. \cite{Althöfer2004}).
+
 \subsection{Our Contributions}
+This paper contributes to the San Jego research by building a solid, open-source framework.
 \begin{itemize}
   \item theoretical analysis
   \item Framework:
@@ -209,7 +221,7 @@ Its core idea is to consider random moves, collect statistics about their outcom
 In San Jego, the game state space becomes unmanageable quite early.
 \citeauthor{Althöfer2020} report that the full search on boards as small as $5\times5$ with their NegaScout implementation (an optimized version of $\alpha$-$\beta$-pruning) took \enquote{several days} \cite[p.~8]{Althöfer2020}.
 Using the optimizations outlined in section \ref{subsec:low-level}, it is likely possible to bring that number down.
-Typical computer olympiad matches of similar games, however, are played on $10\times10$ boards, which is completely hopeless to encounter with full search.
+Typical computer olympiad matches of similar games, however, are played on $10\times10$ boards \cite{Wojciech2011}, which is completely hopeless to encounter with full search.
 Therefore, MCTS should be used for San Jego playing programs.
 One important property here is that the branching factor monotonically decreases in the course of the game, as each turn a tower is effectively eliminated.
 This makes full tree search applicable in the end game to play that phase more precisely.
@@ -234,7 +246,7 @@ Therefore, several improvements are possible.
 %\end{tikzpicture}
 %\end{center}
 
-\begin{itemize}
+%\begin{itemize}
   %\item board is symmetrical and rotationally invariant -> speed up start
   %\item towers can not move to empty fields -> each turn a tower is removed -> max number of turns is fixed and depends on board size
   %\item what move to choose in first turn? all moves produce same board value -> empirically: moves to center of boards are more powerful on average \cite{Althöfer2020}
@@ -242,9 +254,9 @@ Therefore, several improvements are possible.
   %\item cache the hights of the highest towers of both players (avoids costly recalculation in every explored node); recalculation only necessary if new higher tower was built or a tower with the max height of a player was taken
   %\item if a player had to skip once, there will never be a move available to them again
   %\item isolated regions
-\end{itemize}
+%\end{itemize}
 
-\section{The Algorithm}
+\section{Implementation}
 \begin{itemize}
   \item tower representation
   \item fit board in cache line and align
@@ -254,63 +266,9 @@ Therefore, several improvements are possible.
   \item traverse game tree in parallel
 \end{itemize}
 
-\subsection{Internal Representation of Mock Labels}
-\label{sub:sec:internal}
-
-In Figure~\ref{fig:integer:sets} we convert the mock labels to sorted integer sets.
-
-
-
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=\linewidth]{./graphics/integer_sets.pdf}
-  \caption{Conversion of mock camera labels to sorted integer sets. 
-We map each unique token (key) in camera labels to a unique value. 
-Based on these key-value-mappings, we convert camera labels to sorted integer sets. 
-A camera can have different names in different countries. Therefore, repeating IDs reference the same cameras (see, for example, ID=3).} 
-  \label{fig:integer:sets}
-\end{figure}
-
-\subsection{Efficient Preprocessing of Input Data}
-\label{sub:sec:preprocessing}
-
-The following findings are important to speed up preprocessing of the input data:
-
-\begin{itemize}
-\item Reading many small files concurrently, with multiple threads (compared to a single thread), takes advantage of the internal parallelism of SSDs and thus leads to higher throughput \cite{Zhuang2016}.
-
-\item C-string manipulation functions are often significantly faster than their C++ pendants. For example, locating substrings with \texttt{strstr} is around five times faster than using the C++ \texttt{std::string} function \texttt{find}.
-
-\item Hardcoding regular expressions with \emph{while, for, switch} or \emph{if-else} statements results in faster execution times than using standard RegEx libraries, where regular expressions are compiled at runtime into state machines.
-
-\item Changing strings in place, instead of treating them as immutable objects, eliminates allocation and copying overhead.
-
-\end{itemize}
-
 
 \section{Experiments}
 
-Table~\ref{tab:results} shows the running times of the resolution step of the five best placed teams.
-
-
-\begin{table}[htbp]
-  \caption{Comparison of the F-measure and the running times of the resolution step of the five best placed teams. The input data for the resolution step consisted of 29{,}787 in JSON formatted e-commerce websites. Measurements were taken on a
-laptop running Ubuntu 19.04 with 16 GB of RAM and two Intel Core i5-4310U CPUs. The underlying SSD was a 500\,GB 860 EVO mSATA. We cleared the page cache, dentries, and inodes before each run to avoid reading the input data from RAM instead of the SSD.}
-  \label{tab:results}
-\resizebox{\columnwidth}{!}{
-  \begin{tabular}{lcrr}
-    \toprule
-    Team& Language & F-measure & Running time (s)\\
-    \midrule
-	PictureMe (\textbf{this paper}) &C++& 0.99 & \textbf{0.61}\\
-    DBGroup@UniMoRe &Python& 0.99 & 10.65\\
-    DBGroup@SUSTech &C++& 0.99 & 22.13\\
-    eats\_shoots\_and\_leaves &Python& 0.99 & 28.66\\
-    DBTHU &Python& 0.99& 63.21\\
-  \bottomrule
-\end{tabular}
-}
-\end{table}
 
 
 \section{Conclusions}
