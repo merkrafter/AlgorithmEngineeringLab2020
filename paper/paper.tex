@@ -5,6 +5,8 @@
 % arara: clean: {files:[paper.aux, paper.bbl, paper.blg, paper.log, paper.out]}
 
 \documentclass[sigconf]{acmart}
+\usepackage[english]{babel}
+\usepackage{csquotes}
 \usepackage{booktabs}
 \usepackage{tikz}
 \usetikzlibrary{matrix.skeleton}
@@ -58,7 +60,7 @@ The five-finger pattern \cite{macgilchrist2014}:
 %%
 %% Keywords. The author(s) should pick words that accurately describe
 %% the work being presented. Separate the keywords with commas.
-\keywords{entity resolution, data cleansing, programming contest}
+\keywords{combinatorial game theory, optimization, bot}
 
 
 %%
@@ -97,14 +99,29 @@ Major contributions were made by \citeauthor{Althöfer2020} \cite{Althöfer2020}
 
 \subsection{Our Contributions}
 \begin{itemize}
-  \item San Jego library
-  \item think of a representation
+  \item theoretical analysis
+  \item Framework:
+  \begin{itemize}
+    \item San Jego library
+    \item reference bot implementation
+    \item metrics
+  \end{itemize}
 \end{itemize}
 
 \subsection{Outline}
 The following section discusses key properties of the game, including ones that can be exploited for an efficient implementation, and those that restrict common optimizations in one way or another.
 
-\section{Observations}
+\section{Theoretical Analysis}
+\paragraph{Tower design}
+This first paragraph focuses on the central objects of this game: the towers.
+Towers are built from the bricks the game starts with by stacking them onto another.
+Important operations on them include the retrieval of height and color of the top brick, as the latter identifies the owner of the tower, and obviously an operations to place them on top of each other.
+Moreover, as we will see later, it is beneficial to offer a way to \enquote{subtract} towers from each other, that is revert the stacking.
+
+The naive implementation would use a growable, list-like structure of integers to store the bricks.
+This would allow constant access times to height and top brick, and linear time complexity to merge two towers.
+As the bricks can only be in one of two states, namely blue and yellow, this would waste a lot of memory.
+
 \paragraph{Symmetry}
 As already mentioned, the game can be played on rectangular boards of arbitrary sizes.
 This makes it difficult to apply size-specific optimizations like bitboards.
@@ -123,11 +140,51 @@ The game rules state that towers can only be placed on top of other towers.
 In particular, they must not be moved to fields that are already empty.
 Several consequences follow from this.
 First, the number of towers is an upper bound for the overall number of moves in a game as with each move the number of towers on the board must decrease by one (the number of towers $-1$ to be precise, as there is no legal move with only one tower on the board).
-This can possibly be used for time management to estimate the remaining length of a game.
+Although the number of moves in a game is usually much lower, this can possibly be used for time management to estimate the remaining length of a game.
 Second, if a player at some point has no legal move left, they have to skip.
 In this situation it is clear that none of their towers has an adjacent tower, otherwise skipping is not allowed.
 It follows that also in the future progression of the game, none of the skipping player's towers will be able to move.
 At this point, the evaluation module does not have to search a game tree anymore, but only count the maximum height reachable for the player that is still active.
+Third, as the game progresses the board gets sparse.
+Analogously to matrices, it might be beneficial to use a representation different from an array in that case.
+While this likely plays a minor part for smaller boards, the effects on larger boards can be dramatic, especially in the end game where large portions of the board are free.
+During move generation, all towers of the active player have to be iterated.
+This operation is highly inefficient if, for instance, 70\% of all fields are empty.
+Here, using a map to store the board (or possibly two maps: one for each player) should reduce the runtime considerably.
+Towers that have no neighbours can easily be ignored during move generation as they will not be able to move ever again.
+However, move generation is not the only computational cost.
+The other part is the evaluation step.
+For that, \emph{all} towers on the board must be iterated to consider their height.
+Early on, this process is perfectly efficient using an array representation, allowing vectorized processing.
+Small boards, moreover, fit completely into a single cache line in that model.
+Altogether, it is expected that there is some turn number (dependent on the board \emph{shape}) at which it is beneficial to change the board representation from an array to a map.
+(The word \emph{shape} is used instead of \emph{size} to emphasize that computations on a $1\times15$ board are much easier than on a $3\times5$ board, although the number of fields is equal \cite{Althöfer2020}.)
+As this number is probably also dependent on the hardware being used (e.g. the vector instruction set), it is suggested to leave this up to the user's choice via a parameter.
+The evaluation step also carries room for minor optimizations in a map representation similar to the ones mentioned above at the generation phase.
+Isolated towers may be immovable, but they are also \emph{safe}:
+the opponent can not take them over, so they form an upper bound for the margin a player can loose by.
+This means that only a single isolated tower with the maximum height for each player has to be stored as all others won't affect the outcome.
+The towers on the board tend to decay into many isolated regions in the end game.
+This behaviour is well known from the related game Clobber \cite{Althöfer2004}.
+Therefore, ignoring a large portion of irrelevant towers in the end game allows the evaluation module to find the truly important towers in the current state.
+This technique only works for single isolated towers, though.
+It is not possible to ignore whole regions of connected towers whose sum of heights is lower than the height of some other isolated tower.
+As soon as towers are connected, they can be moves which means that they contribute to maneuvers like zugzwang in other regions on the board.
+This can be ignored, of course, if some player has a safe tower that is higher than any other active region can sum up to, but this happens fairly rarely if both players are about equally strong.
+
+% TODO find a good headline
+\paragraph{Board value caching}
+The next optimization is based on observing when the game value changes.
+As it is only based on the highest towers, it is inherently robust to most changes on the board.
+Hence, much computation can be saved when the height of the highest towers for each player is cached.
+It only has to be updated in two cases:
+First, a player creates a new highest tower.
+In that case, the cached number just has to be overwritten which is a cheap operation.
+Second, the opponent takes over a tower with the same height as the cached maximum.
+This is the only (comparatively) expensive case as the whole board must be searched to find the new highest tower.
+The cache can be extended to the top $k$ towers for each player to delay the full search case.
+It is open for which $k$ the cache management becomes too costly to be effective (remember that the first case creates linear overhead for $k$ cached heights).
+
 
 %\begin{center}
 %\begin{tikzpicture}
@@ -142,9 +199,11 @@ At this point, the evaluation module does not have to search a game tree anymore
 \begin{itemize}
   %\item board is symmetrical and rotationally invariant -> speed up start
   %\item towers can not move to empty fields -> each turn a tower is removed -> max number of turns is fixed and depends on board size
-  \item moves to center of boards are more powerful on average \cite{Althöfer2020}
-  \item if a player had to skip once, there will never be a move available to them again
-  \item isolated regions
+  \item what move to choose in first turn? all moves produce same board value -> empirically: moves to center of boards are more powerful on average \cite{Althöfer2020}
+  \item maximum tower height: m*n => can be used for representation improvement
+  %\item only an idea, so better rethink: cache the hights of the highest towers of both players (avoids costly recalculation in every explored node); recalculation only necessary if new higher tower was built or a tower with the max height of a player was taken
+  %\item if a player had to skip once, there will never be a move available to them again
+  %\item isolated regions
 \end{itemize}
 
 \section{The Algorithm}
