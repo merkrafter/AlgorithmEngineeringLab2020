@@ -13,7 +13,7 @@ Some weeks contain code snippets that investigate what effects certain technique
 
 ## Project
 The second part of this course is a more complex C++ project to put the pieces learned in the assignments together.
-In my case, it is a bot for a round-based, two-player board game.
+In my case, it is a bot library for a round-based, two-player board game.
 Have a look at its README file for further information.
 
 ## Paper
