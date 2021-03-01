@@ -11,7 +11,7 @@
 \usepackage{tikz}
 \usetikzlibrary{matrix.skeleton}
 
-\newcommand{\bl}{\node [circle, minimum size=0.7cm, draw=black, fill=blue!65!white, thin]{};}
+\newcommand{\bl}[1]{\node [circle, minimum size=0.7cm, draw=black, fill=blue!65!white, thin]{{#1}};}
 \newcommand{\wh}{\node [rectangle, minimum size=0.7cm, draw=black, fill=yellow] {};}
 
 
@@ -26,12 +26,6 @@
 
 \acmConference[AELAB 2021]{AELAB 2021: Algorithm Engineering LAB Projects}{March 1}{Jena, Germany}
 
-% convert text to title case
-% http://individed.com/code/to-title-case/
-
-% that helps you to formulate your sentences
-% https://www.deepl.com/translator
-
 \begin{document}
 
 \title[San Jego]{Efficient Bot for The Game of San Jego\\\large Algorithm Engineering LAB 2021 Project Paper}
@@ -45,13 +39,12 @@
 %% The abstract is a short summary of the work to be presented in the article.
 \begin{abstract}
 
-\begin{enumerate}
-\item \textbf{Topic and background:} What topic does the paper deal with? What is the point of departure for your research? Why are you studying this now?
-\item \textbf{Focus:} What is your research question? What are you studying precisely?
-\item \textbf{Method:} What did you do?
-\item \textbf{Key findings:} What did you discover?
-\item \textbf{Conclusions or implications:} What do these findings mean? What broader issues do they speak to?
-\end{enumerate}
+San Jego is a relatively new round-based board game with perfect information, that was invented by Ingo Althöfer in 2015.
+As the similar game Clobber, it falls into the category of combinatorial games, which have seen rich research already.
+This makes it a perfect topic for algorithm engineering tasks.
+So far, no strong program is known for playing San Jego.
+This paper examines algorithms and techniques to write a program that plays this game efficiently.
+It also describes a standard library implementation for the game that will help implement these programs, and makes them comparable to each other.
 
 
 \end{abstract}
@@ -97,25 +90,26 @@ Finding all black knights on the board is now as efficient as computing a bitwis
 
 This particular game of San Jego has not received much attention yet, but it bears potential for interesting optimizations explained later in this paper.
 Major contributions to the theory of San Jego were made by \citeauthor{Althöfer2020} \cite{Althöfer2020}.
-They proved an upper bound for the game state complexity, the branching behavior, and precise values for games on small boards.
+They proved an upper bound for the game state complexity, the branching behavior, and precise values for games on small boards, that is up to $5\times5$.
 The optimal move lines that lead to these values were not published, though.
 
-San Jego research somewhat profits from the research on the related game Clobber (e.g. \cite{Althöfer2004}).
+San Jego research somewhat profits from the research on the related game Clobber which is usually played on $10\times10$ boards (e.g. \cite{Althöfer2004}).
+This is also the next goal in San Jego research:
+Competing successfully in games on boards of that size.
 
 \subsection{Our Contributions}
 This paper contributes to the San Jego research by building a solid, open-source framework.
-\begin{itemize}
-  \item theoretical analysis
-  \item Framework:
-  \begin{itemize}
-    \item San Jego library
-    \item reference bot implementation
-    \item metrics
-  \end{itemize}
-\end{itemize}
+Based on this, future work in the field will be simplified and accelerated.
+Moreover, this reference implementation can provide an objective ground for comparisons.
+For instance, to evaluate the success of optimizations, metrics as the run time, the number of nodes searched, or the number of wins against an easy bot implementation can be compared to the standard implementation.
+The second contribution of this paper is a comprehensive theoretical analysis of the game and possible starting points for optimizations.
+
+Together, these contributions are meant to push San Jego research to the point where powerful bots can be built easily.
 
 \subsection{Outline}
 The following section discusses key properties of the game, including ones that can be exploited for an efficient implementation, and those that restrict common optimizations in one way or another.
+Thereafter, the reference implementation is presented in detail.
+It is shown what types where defined, how they work together and how they can be extended.
 
 \section{Theoretical Analysis}
 This section is subdivided into two parts.
@@ -141,10 +135,28 @@ Then, the integer can be used to store the height value directly, reducing the s
 Adding two towers now simplifies to adding their heights and setting the top brick correctly.
 
 \paragraph{Symmetry}
+
+\begin{figure}
+\begin{center}
+\begin{tikzpicture}
+\matrix (m) [matrix of nodes, style grid={draw}, nodes in empty cells, label skeleton, row sep=2mm, column sep=2mm, nodes={minimum size = 0.8cm}] {
+ \bl{} & \wh    & \bl{} \\ 
+ \wh   &        & \wh   \\ 
+ \bl{} & \bl{2} & \bl{} \\
+};
+\end{tikzpicture}
+\end{center}
+\caption{An example game state after the first move of the blue player on a $3\times 3$ board.
+The center brick was moved down, creating a tower of height 2 with a blue top brick and a yellow brick below (not shown here).
+The board's center will now remain empty for the rest of the game.
+Moving the center tower is the optimal choice; due to symmetries, any direction is equally good, leading to a win for blue by a margin of 3.
+If the yellow player started, they could win by a margin of 1 (game value -1) by first taking over the board's center.
+} \label{fig:example-state}
+\end{figure}
 As already mentioned, the game can be played on rectangular boards of arbitrary sizes.
 This makes it difficult to apply size-specific optimizations like bitboards.
 However, independent of its shape, the game board is symmetrical along both axes.
-This means that on a $3\times3$ board, say, moving the center tower up or down in the first turn yields equivalent game states.
+This means that on a $3\times3$ board, say, moving the center tower up or down in the first turn yields equivalent game states (Fig. \ref{fig:example-state}).
 In addition, square boards are rotationally symmetrical, that is on this particular board, moving the center tower left or right also yields states equivalent to the ones mentioned before.
 So far, openings have not been studied deeply, and no best first move has been discovered for arbitrary board shapes.
 Therefore, exploiting the symmetries is the main tool for reducing the number of moves to consider in the first turns.
@@ -226,6 +238,12 @@ Therefore, MCTS should be used for San Jego playing programs.
 One important property here is that the branching factor monotonically decreases in the course of the game, as each turn a tower is effectively eliminated.
 This makes full tree search applicable in the end game to play that phase more precisely.
 
+Game tree search, either full or stochastical, can usually be parallelized easily.
+Several units, be it threads, processes or even machines, can search different subtrees of the present game state concurrently.
+In naive implementations using a static scheduling, however, concurrent units can starve quickly, and become useless as soon as it becomes apparent that their subtree can be cut off while pruning.
+Hence, evaluation of states should be implemented using tasking or iterative deepening.
+
+
 \paragraph{Search strategy}
 An important factor for the success of game tree searching is the evaluation function.
 In some combinatorial games like chess and Go, the value of a game state is generally not known.
@@ -235,16 +253,11 @@ Whatever move the player chooses, they all lead to a game state with the same va
 Therefore, several improvements are possible.
 \citeauthor{Althöfer2020} found that a combination of prioritizing moves that target high enemy towers and deprioritizing moves that target high own towers on the one hand, and prioritizing moves targetting the center of the board on the other hand work together nicely.
 
-
-%\begin{center}
-%\begin{tikzpicture}
-%\matrix (m) [matrix of nodes, style grid={draw}, nodes in empty cells, label skeleton, row sep=2mm, column sep=2mm, nodes={minimum size = 0.8cm}] {
-% \bl & \bl & \bl  \\ % for some reason this only works with an empty cell
-% \wh &     & \wh  \\ 
-% \bl & \wh & \bl  \\
-%};
-%\end{tikzpicture}
-%\end{center}
+In a concurrent setting, some of the units can also be used to run more complex analyses on the game state.
+In San Jego, this could include analysis of the isolated regions to find optimal moves to solve them.
+Although it was already lined out that these regions can not simply be evaluated independently from each other due to effects as zugzwang, this analysis can help to find critical moves to aid in move ordering.
+Regions are harder to evaluate the more \enquote{rectangular-like} they are as the branching factor gets bigger.
+In practice, the rectangular regions with the shape $3\times4$ can be evaluated within few seconds even by a simple, single-threaded python program that does not use any of the optimizations laid out in the previous subsection, giving an idea for the size of regions feasible for this kind of analysis.
 
 %\begin{itemize}
   %\item board is symmetrical and rotationally invariant -> speed up start
@@ -257,21 +270,41 @@ Therefore, several improvements are possible.
 %\end{itemize}
 
 \section{Implementation}
-\begin{itemize}
-  \item tower representation
-  \item fit board in cache line and align
-  \item use vector SIMD to compute board value
-  \item use map instead of array for sparse boards in end game
-  \item use opening table
-  \item traverse game tree in parallel
-\end{itemize}
+Additionally to the theoretical analysis, this paper provides a San Jego library implementation.
+It can be used in the future to test different bot implementations and optimizations against a baseline.
 
+The library itself is written in C++ and managed by the CMake build system.
+It makes use of templates to describe board sizes.
+This way, compile-time optimizations are available such as the bits for the tower data structure as outlined in subsection \ref{subsec:low-level}. 
+For simplicity, and in order to not disturb alignment of the underlying integers, a whole byte is used to back the towers.
+It is sufficient to play on board with up to 127 fields, which includes the \enquote{olympic} size of $10\times10$.
+As towers can not have a height of 0, this representation is used for absent towers on the board.
 
-\section{Experiments}
+The board itself is represented as a vector of towers (an array of bytes, eventually) which makes it very memory-efficient and thus cache-friendly.
+It provides operations to make and undo moves, to retrieve towers, and to find the the towers of maximum height for each player.
+The loop to compute this latter value is not easily auto-vectorizable as it contains jumps that depend on the top brick color of each tower.
+However, if it turns out that this computation still uses a great share of computation time after the above mentioned caching of height values was applied, the condition on the color could be replaced by a multiplication of the tower height with the boolean \texttt{tower.top()==color\_of\_interest} which is implicitly converted to $0$ or $1$ (C++ standard \texttt{\S4.5/4}).
+Note that the board itself has not included any game logic in the sense of rules.
+Any move can be applied, except for moves that target fields outside the underlying vector's bounds.
 
+The rule set is implemented independently in its own header file.
+This decoupling makes it possible to reuse the board for different rule sets, or a rule set for different board implementations.
+Rules stem from an abstract base class, and must implement a method that decides whether a move is legal or not, and a method to evaluate a game state.
+Other operations as iterating all legal moves, or determining whether the game has ended follow from these to rules, but are implemented explicitly which allows for further optimizations and clarity.
 
+Lastly, the library defines an abstract explorer class that encapsulates the game tree search.
+It takes a rule set as a parameter to make it reusable for many rule sets.
+This standard implementation only defines a weak dummy bot that looks one move ahead, but more sophisticated explorers can be added easily.
+
+Great emphasis was placed on correctness when implementing the standard library, hence it comes with a couple of test cases described using the Catch2 unit test library.
+Future optimizing steps can rely on them to ensure they do not break things.
+
+The library is published under the MIT license, and is tested with gcc, clang and MSVC under GNU/Linux and Windows.
 
 \section{Conclusions}
+The game of San Jego is a great playground to implement and test efficient and clever algorithms on.
+This paper makes many suggestions as to what techniques a playing program could (and probably should) be using in order to achieve the best results possible today.
+It also provides an correct, efficient and well-organized standard library implementation that will boost the development of San Jego bots in the future.
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{literature}
